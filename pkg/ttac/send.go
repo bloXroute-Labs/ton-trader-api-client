@@ -11,7 +11,7 @@ import (
 	"github.com/xssnick/tonutils-go/ton/wallet"
 )
 
-// SendTransaction sends a signed transaction to the TON network via the specified endpoint.
+// SendTransaction sends a signed transaction to a TON trader API instance using the specified endpoint.
 //
 // This function builds a request for submitting a signed TON transaction based on the wallet type.
 // It converts the provided external message into a format that can be sent to the TON Trader API.
