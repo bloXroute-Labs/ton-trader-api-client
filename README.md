@@ -2,7 +2,12 @@
 
 ## intro
 
-This repo contains a TON trader API client (`ttac`) package and some example code that demonstrates how to build and send a request to bloXroute's TON trader API service.
+This repo contains a [TON trader API client (`ttac`) package](pkg/ttac) and some [example code](cmd/ttc/main.go) that demonstrates how to build and send a request to bloXroute's TON trader API service.
+
+The `ttac` package features the following functions:
+- `GenerateTransaction()`: generates a TON transaction including a tip transfer to the bloXroute tip address
+- `GetTipTransfer()`: generates just the bloXroute tip transfer
+- `SendTransaction()`: sends a transaction to TON trader API
 
 In order to try the code you will need: a
 - file that contains the seed phrase for the wallet from which you wish to send
