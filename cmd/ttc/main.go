@@ -73,7 +73,7 @@ func main() {
 			},
 			&cli.StringFlag{
 				Name:  argEndPointURI,
-				Value: "https://eu.ton.dex.blxrbdn.com",
+				Value: "https://frankfurt.ton.dex.blxrbdn.com",
 				Usage: "TON trader API endpoint",
 			},
 			&cli.StringFlag{
