@@ -184,8 +184,16 @@ func logArgs(cc *cli.Context) {
 }
 
 func initTon(ctx context.Context, rpcURI string) (*ton.APIClient, error) {
+	var (
+		cfg *liteclient.GlobalConfig
+		err error
+	)
 	client := liteclient.NewConnectionPool()
-	cfg, err := liteclient.GetConfigFromUrl(ctx, rpcURI)
+	if strings.HasPrefix(rpcURI, "http") {
+		cfg, err = liteclient.GetConfigFromUrl(ctx, rpcURI)
+	} else {
+		cfg, err = liteclient.GetConfigFromFile(rpcURI)
+	}
 	if err != nil {
 		return nil, err
 	}
