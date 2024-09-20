@@ -2,22 +2,18 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
-	"errors"
 	"fmt"
-	"math/big"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 	"time"
 
+	"github.com/bloXroute-Labs/ton-trader-api-client/pkg/ttac"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
-	"github.com/xssnick/tonutils-go/address"
 	"github.com/xssnick/tonutils-go/liteclient"
-	"github.com/xssnick/tonutils-go/tlb"
 	"github.com/xssnick/tonutils-go/ton"
 	"github.com/xssnick/tonutils-go/ton/wallet"
 )
@@ -32,7 +28,6 @@ const (
 	argLogLevel           = "log-level"
 	argTip                = "tip"
 	argTonRPCURI          = "ton-rpc-uri"
-	tipAddress            = "UQAw0AJjHbMYQobYXHBoW29ShKx1V2UjaiKanhDYBNJYDPUh"
 )
 
 var (
@@ -156,13 +151,13 @@ func run(cc *cli.Context) error {
 	log.Info().Msgf("wallet balance: %v", balance)
 
 	// generate the transaction: 1 transfer to destination address + a bloXroute tip transfer
-	tx, err := genTx(from, cc.String(argDestinationAddress), cc.Int64(argAmount), cc.Int64(argTip), cc.String(argComment))
+	tx, err := ttac.GenerateTransaction(ctx, from, cc.String(argDestinationAddress), cc.Int64(argAmount), cc.Int64(argTip), cc.String(argComment))
 	if err != nil {
 		return err
 	}
 
 	// send transaction to TON trader API
-	hash, err := sendViaTTA(ctx, cc.String(argEndPointURI), cc.String(argAuthHeader), from, tx)
+	hash, err := ttac.SendTransaction(ctx, cc.String(argEndPointURI), cc.String(argAuthHeader), from, tx)
 	if err != nil {
 		return err
 	}
@@ -221,68 +216,4 @@ func readPhrase(path string) ([]string, error) {
 		return nil, fmt.Errorf("invalid phrase, length %d", len(words))
 	}
 	return words, nil
-}
-
-func sendViaTTA(ctx context.Context, endPoint, authHeader string, w *wallet.Wallet, msgs []*wallet.Message) (string, error) {
-	var walletType string
-	switch w.GetSpec().(type) {
-	case (*wallet.SpecHighloadV2R2):
-		walletType = "HighloadV2R2"
-	case (*wallet.SpecHighloadV3):
-		walletType = "HighloadV3"
-	case (*wallet.SpecV3):
-		return "", errors.New("unsupported wallet type; please use one these: HighloadV2R2, HighloadV3, V4R2 or V5R1Final")
-	case (*wallet.SpecV4R2):
-		walletType = "V4R2"
-	case (*wallet.SpecV5R1Beta):
-		return "", errors.New("unsupported wallet type; please use one these: HighloadV2R2, HighloadV3, V4R2 or V5R1Final")
-	case (*wallet.SpecV5R1Final):
-		walletType = "V5R1Final"
-	default:
-		return "", errors.New("unsupported wallet type; please use one these: HighloadV2R2, HighloadV3, V4R2 or V5R1Final")
-	}
-
-	ext, err := w.BuildExternalMessageForMany(ctx, msgs)
-	if err != nil {
-		return "", fmt.Errorf("failed to build external message: %v", err)
-	}
-	req := &TTASubmitRequest{
-		Wallet: walletType,
-	}
-	extCell, err := tlb.ToCell(ext)
-	if err != nil {
-		return "", fmt.Errorf("failed to convert external message to cell: %w", err)
-	}
-	req.Transaction.Content = base64.StdEncoding.EncodeToString(extCell.ToBOC())
-	res, err := submitTransaction(endPoint, authHeader, req, 10*time.Second)
-	if err != nil {
-		return "", err
-	}
-	return res.MsgBodyHash, err
-}
-
-func genTx(from *wallet.Wallet, to string, amount, tip int64, comment string) ([]*wallet.Message, error) {
-	var msgs []*wallet.Message
-
-	toAddress, err := address.ParseAddr(to)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse destination address: %v", err)
-	}
-	t1, err := from.BuildTransfer(toAddress, tlb.FromNanoTON(big.NewInt(amount)), true, comment)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate transaction: %v", err)
-	}
-	msgs = append(msgs, t1)
-
-	tipAmount := tlb.FromNanoTON(big.NewInt(tip))
-	tipAddress, err := address.ParseAddr(tipAddress)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse tip address: %v", err)
-	}
-	t2, err := from.BuildTransfer(tipAddress, tipAmount, true, fmt.Sprintf("tip from %s", from.Address().String()))
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate tip transfer: %v", err)
-	}
-	msgs = append(msgs, t2)
-	return msgs, nil
 }

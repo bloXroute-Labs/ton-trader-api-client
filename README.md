@@ -2,7 +2,8 @@
 
 ## intro
 
-This repo contains example code that demonstrates how to build and send a request to bloXroute's TON trader API service.
+This repo contains a TON trader API client (`ttac`) package and some example code that demonstrates how to build and send a request to bloXroute's TON trader API service.
+
 In order to try the code you will need: a
 - file that contains the seed phrase for the wallet from which you wish to send
 - bloXroute authorization header

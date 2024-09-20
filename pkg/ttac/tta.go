@@ -1,7 +1,8 @@
-package main
+package ttac
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -30,8 +31,8 @@ type ErrorResponse struct {
 	Message string `json:"message"`
 }
 
-// submitTransaction sends a POST request to submit a signed TON transaction.
-func submitTransaction(baseURL, authHeader string, submitReq *TTASubmitRequest, timeout time.Duration) (*TTASubmitResponse, error) {
+// submitTransaction sends a POST request to submit a signed TON transaction with a context.
+func submitTransaction(ctx context.Context, baseURL, authHeader string, submitReq *TTASubmitRequest, timeout time.Duration) (*TTASubmitResponse, error) {
 	// Marshal the request body into JSON
 	reqBody, err := json.Marshal(submitReq)
 	if err != nil {
@@ -39,9 +40,9 @@ func submitTransaction(baseURL, authHeader string, submitReq *TTASubmitRequest, 
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	// Create the HTTP request
+	// Create the HTTP request with the provided context
 	url := fmt.Sprintf("%s/api/v2/submit", baseURL)
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqBody))
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(reqBody))
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create HTTP request")
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -57,6 +58,15 @@ func submitTransaction(baseURL, authHeader string, submitReq *TTASubmitRequest, 
 	}
 	resp, err := client.Do(req)
 	if err != nil {
+		// Check if the error is due to context cancellation or deadline exceeded
+		if ctx.Err() == context.Canceled {
+			log.Error().Err(ctx.Err()).Msg("Request was canceled")
+			return nil, fmt.Errorf("request was canceled: %w", ctx.Err())
+		} else if ctx.Err() == context.DeadlineExceeded {
+			log.Error().Err(ctx.Err()).Msg("Request deadline exceeded")
+			return nil, fmt.Errorf("request deadline exceeded: %w", ctx.Err())
+		}
+
 		log.Error().Err(err).Msg("Failed to send HTTP request")
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
