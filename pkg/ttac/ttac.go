@@ -10,7 +10,7 @@ import (
 	"github.com/xssnick/tonutils-go/ton/wallet"
 )
 
-const tipAddress = "UQAw0AJjHbMYQobYXHBoW29ShKx1V2UjaiKanhDYBNJYDPUh"
+const tipAddress = "UQDaFk07luSapiO40EuBDhffgqPQOfpADU6iidxtEeF3YMVt"
 
 // GetTipTransfer creates a transfer message for a tip transaction.
 //
@@ -60,7 +60,7 @@ func GetTipTransfer(from *wallet.Wallet, tip int64) (*wallet.Message, error) {
 //   - to: The destination address as a string (TON address format).
 //   - amount: The amount of TONs to be transferred, in nanoTON (int64).
 //   - tip: The tip amount to be included in the transaction, in nanoTON (int64).
-//   - comment: A string comment to be attached to the transaction (optional).
+//   - comment: A string comment to be attached to the transaction.
 //
 // Returns:
 //   - *tlb.ExternalMessage: A pointer to the built external message that can be submitted to the network.
