@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	"math/rand"
+
 	"github.com/bloXroute-Labs/ton-trader-api-client/pkg/ttac"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -26,6 +28,8 @@ const (
 	argEndPointURI        = "uri"
 	argFromWallet         = "from-wallet"
 	argLogLevel           = "log-level"
+	argRandomAddon        = "random-addon"
+	argRandomPause        = "random-pause"
 	argTip                = "tip"
 	argTonRPCURI          = "ton-rpc-uri"
 )
@@ -80,25 +84,36 @@ func main() {
 				Name:     argFromWallet,
 				Aliases:  []string{"fw"},
 				Required: true,
-				Usage:    "file with the seed phrase for the sending wallet",
+				Usage:    "file `path` with the seed phrase for the sending wallet",
 			},
 			&cli.StringFlag{
 				Name:    argLogLevel,
 				Aliases: []string{"ll"},
 				Value:   "info",
-				Usage:   "log level, one of: debug, info, warn, error",
+				Usage:   "log `level`, one of: debug, info, warn, error",
+			},
+			&cli.Int64Flag{
+				Name:    argRandomAddon,
+				Aliases: []string{"ra"},
+				Value:   2500000,
+				Usage:   "random `addon` to the specified amount, default: 0.0025 TON",
+			},
+			&cli.UintFlag{
+				Name:    argRandomPause,
+				Aliases: []string{"rp"},
+				Usage:   "random `pause` to take before sending, in seconds",
 			},
 			&cli.Int64Flag{
 				Name:    argTip,
 				Aliases: []string{"t"},
 				Value:   15000000,
-				Usage:   "tip, default: 0.015 TON",
+				Usage:   "`tip`, default: 0.015 TON",
 			},
 			&cli.StringFlag{
 				Name:    argTonRPCURI,
 				Aliases: []string{"rpc"},
 				Value:   "https://ton.org/global-config.json",
-				Usage:   "file with the seed phrase for the receiving wallet",
+				Usage:   "TON RPC configuration to use",
 			},
 		},
 	}
@@ -150,8 +165,22 @@ func run(cc *cli.Context) error {
 	}
 	log.Info().Msgf("wallet balance: %v", balance)
 
+	prg := rand.New(rand.NewSource(time.Now().UnixNano()))
+	if cc.Uint(argRandomPause) > 0 {
+		waitPeriod := time.Duration(prg.Intn(int(cc.Uint(argRandomPause))))
+		log.Info().Msgf("pausing for %d seconds", waitPeriod)
+		time.Sleep(waitPeriod * time.Second)
+	}
+
+	amount := cc.Int64(argAmount)
+	if cc.Int64(argRandomAddon) > 0 {
+		addOn := int64(prg.Intn(int(cc.Int64(argRandomAddon))))
+		log.Info().Msgf("random addon: %v", addOn)
+		amount += addOn
+	}
+
 	// generate the transaction: 1 transfer to destination address + a bloXroute tip transfer
-	tx, err := ttac.GenerateTransaction(ctx, from, cc.String(argDestinationAddress), cc.Int64(argAmount), cc.Int64(argTip), cc.String(argComment))
+	tx, err := ttac.GenerateTransaction(ctx, from, cc.String(argDestinationAddress), amount, cc.Int64(argTip), cc.String(argComment))
 	if err != nil {
 		return err
 	}
@@ -175,6 +204,8 @@ func logArgs(cc *cli.Context) {
 		argEndPointURI,
 		argFromWallet,
 		argLogLevel,
+		argRandomAddon,
+		argRandomPause,
 		argTip,
 		argTonRPCURI,
 	}
