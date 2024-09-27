@@ -46,8 +46,8 @@ async function main() {
     const transfer = contract.createTransfer({
         seqno: seqNo,
         secretKey: keyPair.secretKey,
-        messages: [internal(txParams), 
-            internal({
+        messages: [internal(txParams),
+        internal({
             to: bxTipAddr, // bloXroute tip
             value: '0.005',
             init: null,

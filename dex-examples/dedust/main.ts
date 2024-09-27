@@ -13,7 +13,7 @@ type BXParams = {
 
 class BXTonClient extends TonClient4 {
 
-    #bxEndpoint: string; 
+    #bxEndpoint: string;
     #walletType: string;
     #authKey: string;
     #bxAxios: AxiosInstance;
@@ -28,10 +28,11 @@ class BXTonClient extends TonClient4 {
         this.#timeout = bxArgs.timeout || 5000
     }
 
+    // Overriding send method
     async sendMessage(message: Buffer) {
-        let res = await this.#bxAxios.post(this.#bxEndpoint + '/api/v2/submit', 
-            { wallet: this.#walletType, transaction: {content: message.toString('base64') } }, 
-            { headers: {'Authorization': this.#authKey}, timeout: this.#timeout });
+        let res = await this.#bxAxios.post(this.#bxEndpoint + '/api/v2/submit',
+            { wallet: this.#walletType, transaction: { content: message.toString('base64') } },
+            { headers: { 'Authorization': this.#authKey }, timeout: this.#timeout });
         if (res.status != 200) {
             throw Error(`Submission failure: ${res.data}`);
         }
@@ -53,7 +54,7 @@ async function main() {
         throw new Error("Environment variable BX_TIP_ADDR is required.");
     }
     const bxTipAddr = process.env.BX_TIP_ADDR;
-    
+
     const tonArgs = { endpoint: "https://mainnet-v4.tonhubapi.com", timeout: 10000 }
     const bxArgs = { endpoint: "https://frankfurt.ton.dex.blxrbdn.com", authKey: authKey, walletType: "V4R2" }
     const tonClient = new BXTonClient(tonArgs, bxArgs);
@@ -74,7 +75,7 @@ async function main() {
     const scaleAddr = Address.parse(
         "EQBlqsm144Dq6SjbPI4jjZvA1hqTIP3CvHovbIfW_t-SCALE", // Scale jetton
     );
-    const scale = tonClient.open(JettonRoot.createFromAddress(scaleAddr)); 
+    const scale = tonClient.open(JettonRoot.createFromAddress(scaleAddr));
     const poolAddress = await factory.getPoolAddress({
         poolType: PoolType.VOLATILE,
         assets: [Asset.native(), Asset.jetton(scale.address)],
@@ -108,7 +109,7 @@ async function main() {
     }
 
     // 7. Estimate expected output amount
-    const amountIn = toNano("0.003"); 
+    const amountIn = toNano("0.003");
     const { amountOut: expectedAmountOut } = await pool.getEstimatedSwapOut({
         assetIn: Asset.native(),
         amountIn,
@@ -149,7 +150,7 @@ async function main() {
             poolAddress: pool.address,
             amount: amountIn,
             limit: minAmountOut,
-            gasAmount: toNano("0.25"), 
+            gasAmount: toNano("0.25"),
         },
     );
 }
