@@ -31,7 +31,7 @@ async function main() {
 
     const router = client.open(new DEX.v1.Router());
 
-    // swap 1 TON to STON but not less than 1 nano STON
+    // swap TON to STON
     const txParams = await router.getSwapTonToJettonTxParams({
         userWalletAddress: walletAddr,
         proxyTon: new pTON.v1(),
@@ -56,6 +56,7 @@ async function main() {
         })],
     })
 
+    // creating external message
     const extMessage = external({
         to: walletAddr,
         body: transfer
