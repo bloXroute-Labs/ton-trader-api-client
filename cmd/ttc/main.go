@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -32,10 +33,13 @@ const (
 	argRandomPause        = "random-pause"
 	argTip                = "tip"
 	argTonRPCURI          = "ton-rpc-uri"
+	argWalletType         = "wallet-type"
 )
 
 var (
 	bts, rev, version string
+	defaultTimeout    uint32 = 300
+	seqNum            int64
 )
 
 func main() {
@@ -115,6 +119,12 @@ func main() {
 				Value:   "https://ton.org/global-config.json",
 				Usage:   "TON RPC configuration to use",
 			},
+			&cli.StringFlag{
+				Name:    argWalletType,
+				Aliases: []string{"wt"},
+				Value:   "V4R2",
+				Usage:   "wallet type, one of: HighloadV2R2, HighloadV3, V5R1Final, V4R2",
+			},
 		},
 	}
 
@@ -147,17 +157,18 @@ func run(cc *cli.Context) error {
 		return err
 	}
 
-	// initialize wallet from seed phrase
-	from, err := getWallet(api, cc.String(argFromWallet))
-	if err != nil {
-		return err
-	}
-
 	// get current master chain block
 	info, err := api.GetMasterchainInfo(ctx)
 	if err != nil || info == nil {
 		return fmt.Errorf("failed to obtain master chain info, %v", err)
 	}
+
+	// initialize wallet from seed phrase
+	from, err := getWallet(api, info, cc.String(argFromWallet), cc.String(argWalletType))
+	if err != nil {
+		return err
+	}
+
 	// get and print wallet balance
 	balance, err := from.GetBalance(ctx, info)
 	if err != nil {
@@ -208,6 +219,7 @@ func logArgs(cc *cli.Context) {
 		argRandomPause,
 		argTip,
 		argTonRPCURI,
+		argWalletType,
 	}
 	for _, arg := range args {
 		log.Info().Msgf("%s = %v", arg, cc.Value(arg))
@@ -237,12 +249,47 @@ func initTon(ctx context.Context, rpcURI string) (*ton.APIClient, error) {
 	return api, nil
 }
 
-func getWallet(api *ton.APIClient, path string) (*wallet.Wallet, error) {
+func mbf(_ context.Context, _ uint32) (uint32, int64, error) {
+	requestId := uint32(atomic.AddInt64(&seqNum, 1))
+	tm := time.Now().Unix() - 30
+	return requestId, tm, nil
+}
+
+func getWallet(api *ton.APIClient, cmi *ton.BlockIDExt, path, walletType string) (*wallet.Wallet, error) {
 	phrase, err := readPhrase(path)
 	if err != nil {
 		return nil, err
 	}
-	return wallet.FromSeed(api, phrase, wallet.V4R2)
+	wallets := map[string]wallet.Version{
+		"HighloadV2R2": wallet.HighloadV2R2,
+		"HighloadV3":   wallet.HighloadV3,
+		"V5R1Final":    wallet.V5R1Final,
+		"V4R2":         wallet.V4R2,
+	}
+	wt, ok := wallets[walletType]
+	if !ok {
+		return nil, fmt.Errorf("invalid wallet type: '%v'", walletType)
+	}
+	var w *wallet.Wallet
+	switch wt {
+	case wallet.HighloadV3:
+		w, err = wallet.FromSeed(api, phrase, wallet.ConfigHighloadV3{
+			MessageTTL:     defaultTimeout,
+			MessageBuilder: mbf,
+		})
+	case wallet.V5R1Final:
+		w, err = wallet.FromSeed(api, phrase, wallet.ConfigV5R1Final{
+			NetworkGlobalID: wallet.MainnetGlobalID,
+			Workchain:       int8(cmi.Workchain),
+		})
+	default:
+		w, err = wallet.FromSeed(api, phrase, wt)
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to instantiate %v wallet, %v", walletType, err)
+	}
+	return w, nil
 }
 
 func readPhrase(path string) ([]string, error) {

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/xssnick/tonutils-go/tlb"
 	"github.com/xssnick/tonutils-go/ton/wallet"
 )
@@ -67,6 +68,7 @@ func SendTransaction(ctx context.Context, endPoint, authHeader string, w *wallet
 		return "", errors.New("unsupported wallet type; please use one these: HighloadV2R2, HighloadV3, V4R2 or V5R1Final")
 	}
 
+	log.Info().Msgf("walletType = '%v'", walletType)
 	req := &TTASubmitRequest{
 		Wallet: walletType,
 	}
