@@ -52,3 +52,6 @@ GLOBAL OPTIONS:
    --ton-rpc-uri value, --rpc value          file with the seed phrase for the receiving wallet (default: "https://ton.org/global-config.json")
    --help, -h                                show help
 ```
+
+## dex examples
+See `dex-examples` for code samples which connect TON Trader API and popular DEXs - DeDust and StonFi.
