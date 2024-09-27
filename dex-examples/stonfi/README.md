@@ -9,6 +9,8 @@ npm install
 npm run build; MNEMONIC="mnemonic phrase of your wallet" WALLET_ADDR=="your wallet address" BX_TIP_ADDR="bloXroute tip address" npm run start
 ```
 
+Output example:
+```bash
 {to: Address, value: 191000000n, body: Cell}
 main.ts:43
 te6cckECBAEAAWUAAuOIAWHOZ6pdd/4M30ff288x/SVnUlXeCWmAc9orQ2582lOCBR0f8JBJf9CCfPfjedA34xKI7NSL5wml8DutN2Wx5xGdGRb4DeMAQK2BHTIxNQ/BTY0GVp3WdtreMbI1H5oI0HFNTRi7N7aBWAAAATgACAwBAwHTYgAIqFqMWTE1aoxM/MRD/EEluAMqKyKvv/FAn4CTTNIDD6BbE24AAAAAAAAAAAAAAAAAAA+KfqUAAAAAAAAwOTW42AgA7zuZAqJxsqAciTilI8/iTnGEeq62piAAHtRKd6wOcJwQLBuBAwIAlSWThWGAEPckSDVNSxvmJOKMGCE4qb+zE0NdQGXsIPpYy63RDznGW42BACw5zPVLrv/Bm+j7+3nmP6Ss6kq5wS0wDntFaG3Pm0pwUABmYgAYaAExjtmMIUNsLjg0LbepQlY6q7KRtRFNTwhsAmksBhh6EgAAAAAAAAAAAAAAAAAABzGaRA==
