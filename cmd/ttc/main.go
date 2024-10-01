@@ -123,7 +123,7 @@ func main() {
 				Name:    argWalletType,
 				Aliases: []string{"wt"},
 				Value:   "V4R2",
-				Usage:   "wallet type, one of: HighloadV2R2, HighloadV3, V5R1Final, V4R2",
+				Usage:   "wallet type, one of: HighloadV3, V4R2",
 			},
 		},
 	}
@@ -261,10 +261,8 @@ func getWallet(api *ton.APIClient, cmi *ton.BlockIDExt, path, walletType string)
 		return nil, err
 	}
 	wallets := map[string]wallet.Version{
-		"HighloadV2R2": wallet.HighloadV2R2,
-		"HighloadV3":   wallet.HighloadV3,
-		"V5R1Final":    wallet.V5R1Final,
-		"V4R2":         wallet.V4R2,
+		"HighloadV3": wallet.HighloadV3,
+		"V4R2":       wallet.V4R2,
 	}
 	wt, ok := wallets[walletType]
 	if !ok {
