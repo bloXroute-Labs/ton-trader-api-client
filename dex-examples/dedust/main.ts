@@ -54,6 +54,10 @@ async function main() {
         throw new Error("Environment variable BX_TIP_ADDR is required.");
     }
     const bxTipAddr = process.env.BX_TIP_ADDR;
+    if (!process.env.CLIENT) {
+        throw new Error("Environment variable CLIENT is required.");
+    }
+    const client = process.env.CLIENT;    
 
     const tonArgs = { endpoint: "https://mainnet-v4.tonhubapi.com", timeout: 10000 }
     const bxArgs = { endpoint: "https://frankfurt.ton.dex.blxrbdn.com", authKey: authKey, walletType: "V4R2" }
@@ -138,7 +142,7 @@ async function main() {
     }
 
     // 7. Estimate expected output amount
-    const amountIn = toNano("0.01");
+    const amountIn = toNano("0.001");
     const { amountOut: expectedAmountOut } = await pool.getEstimatedSwapOut({
         assetIn: Asset.native(),
         amountIn,
@@ -149,80 +153,81 @@ async function main() {
     console.log("min amount out = "+minAmountOut)
 
     // 8. Send a transaction
-    console.log("now: "+Date.now())
-
-    const bxSender4: Sender = {
-        send: async (args) => {
-            let seqno = await wallet4.getSeqno();
-            let secretKey = keys.secretKey
-            let transfer = wallet4.createTransfer({
-                seqno,
-                secretKey,
-                sendMode: args.sendMode,
-                messages: [internal({
-                    to: args.to,
-                    value: args.value,
-                    init: args.init,
-                    body: args.body,
-                    bounce: args.bounce
-                }), internal({
-                    to: bxTipAddr, // bloXroute tip
-                    value: '0.015',
-                    init: null,
-                    body: beginCell().endCell(),
-                    bounce: args.bounce
-                })]
-            });
-            await wallet4.send(transfer);
+    const now = new Date()
+    console.log("now: "+now.toISOString())
+    if (client == "ton4") {
+        const bxSender4: Sender = {
+            send: async (args) => {
+                let seqno = await wallet4.getSeqno();
+                let secretKey = keys.secretKey
+                let transfer = wallet4.createTransfer({
+                    seqno,
+                    secretKey,
+                    sendMode: args.sendMode,
+                    messages: [internal({
+                        to: args.to,
+                        value: args.value,
+                        init: args.init,
+                        body: args.body,
+                        bounce: args.bounce
+                    }), internal({
+                        to: bxTipAddr, // bloXroute tip
+                        value: '0.015',
+                        init: null,
+                        body: beginCell().endCell(),
+                        bounce: args.bounce
+                    })]
+                });
+                await wallet4.send(transfer);
+            }
         }
+        await nativeVault4.sendSwap(
+            bxSender4,
+            {
+                poolAddress: pool.address,
+                amount: amountIn,
+                limit: minAmountOut,
+                gasAmount: toNano("0.08"),
+            },
+        );    
+    } else {        
+        const bxSender: Sender = {
+            send: async (args) => {
+                let seqno = await wallet.getSeqno();
+                let secretKey = keys.secretKey
+                let transfer = wallet.createTransfer({
+                    seqno,
+                    secretKey,
+                    sendMode: args.sendMode,
+                    messages: [internal({
+                        to: args.to,
+                        value: args.value,
+                        init: args.init,
+                        body: args.body,
+                        bounce: args.bounce
+                    })
+                    , internal({
+                        to: "UQBxilZz_2cN_Ficy91kj4v5Zy5pPHl6fkZi83xiMeGUxSzx", // bloXroute tip
+                        value: '0.001',
+                        init: null,
+                        body: beginCell().endCell(),
+                        bounce: args.bounce
+                    })
+                ]
+                });
+                await wallet.send(transfer);
+            }
+        }
+        await nativeVault.sendSwap(
+            bxSender,
+            {
+                poolAddress: pool.address,
+                amount: amountIn,
+                limit: minAmountOut,
+                gasAmount: toNano("0.08"),
+            },
+        );        
     }
-    await nativeVault4.sendSwap(
-        bxSender4,
-        {
-            poolAddress: pool.address,
-            amount: amountIn,
-            limit: minAmountOut,
-            gasAmount: toNano("0.0025"),
-        },
-    );
-
-    // await sleep(10000);
-
-    // console.log("now: "+Date.now())
-    // const bxSender: Sender = {
-    //     send: async (args) => {
-    //         let seqno = await wallet.getSeqno();
-    //         let secretKey = keys.secretKey
-    //         let transfer = wallet.createTransfer({
-    //             seqno,
-    //             secretKey,
-    //             sendMode: args.sendMode,
-    //             messages: [internal({
-    //                 to: args.to,
-    //                 value: args.value,
-    //                 init: args.init,
-    //                 body: args.body,
-    //                 bounce: args.bounce
-    //             }), internal({
-    //                 to: bxTipAddr, // bloXroute tip
-    //                 value: '0.015',
-    //                 init: null,
-    //                 body: beginCell().endCell(),
-    //                 bounce: args.bounce
-    //             })]
-    //         });
-    //         await wallet.send(transfer);
-    //     }
-    // }
-    // await nativeVault.sendSwap(
-    //     bxSender,
-    //     {
-    //         poolAddress: pool.address,
-    //         amount: amountIn,
-    //         limit: minAmountOut,
-    //         gasAmount: toNano("0.0025"),
-    //     },
-    // );    
 }
 
 async function sleep(ms: number): Promise<void> {
