@@ -202,7 +202,7 @@ func run(cc *cli.Context) error {
 	}
 
 	// generate the transaction: 1 transfer to destination address + a bloXroute tip transfer
-	from, tx, err := genTx(ctx, ws, cc.String(argDestinationAddress), amount, cc.Int64(argTip), cc.String(argComment))
+	from, tx, err := genTx(ctx, api, ws, cc.String(argDestinationAddress), amount, cc.Int64(argTip), cc.String(argComment))
 	if err != nil {
 		return err
 	}
@@ -331,7 +331,7 @@ func readPhrase(path string) ([]string, error) {
 	return words, nil
 }
 
-func genTx(ctx context.Context, ws [2]*wallet.Wallet, toAddress string, amount, tip int64, comment string) (*wallet.Wallet, *tlb.ExternalMessage, error) {
+func genTx(ctx context.Context, api *ton.APIClient, ws [2]*wallet.Wallet, toAddress string, amount, tip int64, comment string) (*wallet.Wallet, *tlb.ExternalMessage, error) {
 	var (
 		bothWallets bool = ws[0] != nil && ws[1] != nil
 		err         error
@@ -340,13 +340,11 @@ func genTx(ctx context.Context, ws [2]*wallet.Wallet, toAddress string, amount, 
 		tx          *tlb.ExternalMessage
 	)
 
+	// we specify 2 wallets and want to send from the wallet with the higher balance
 	if bothWallets {
-		if flipint := rand.Intn(2); flipint == 0 {
-			from = ws[0]
-			to = ws[1]
-		} else {
-			from = ws[1]
-			to = ws[0]
+		from, to, err = determineSender(ctx, api, ws)
+		if err != nil {
+			return nil, nil, err
 		}
 		tx, err = ttac.GenerateTransaction(ctx, from, to.Address().String(), amount, tip, comment)
 		if err != nil {
@@ -357,9 +355,33 @@ func genTx(ctx context.Context, ws [2]*wallet.Wallet, toAddress string, amount, 
 	if !firstWallet {
 		return nil, nil, fmt.Errorf("first wallet is nil")
 	}
+	// we specify just one wallet and want to send from to the destination address
 	tx, err = ttac.GenerateTransaction(ctx, ws[0], toAddress, amount, tip, comment)
 	if err != nil {
 		return nil, nil, err
 	}
 	return ws[0], tx, err
+}
+
+func determineSender(ctx context.Context, api *ton.APIClient, ws [2]*wallet.Wallet) (*wallet.Wallet, *wallet.Wallet, error) {
+	// the wallet with higher balance shall be the sender
+	info, err := api.GetMasterchainInfo(ctx)
+	if err != nil || info == nil {
+		return nil, nil, fmt.Errorf("failed to obtain master chain info, %v", err)
+	}
+
+	b1, err := ws[0].GetBalance(ctx, info)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to obtain wallet balance for %v, %v", ws[0].Address(), err)
+	}
+
+	b2, err := ws[1].GetBalance(ctx, info)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to obtain wallet balance for %v, %v", ws[1].Address(), err)
+	}
+
+	if b1.Nano().Int64() > b2.Nano().Int64() {
+		return ws[0], ws[1], nil
+	}
+	return ws[1], ws[0], nil
 }
