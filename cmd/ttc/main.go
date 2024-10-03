@@ -17,6 +17,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
 	"github.com/xssnick/tonutils-go/liteclient"
+	"github.com/xssnick/tonutils-go/tlb"
 	"github.com/xssnick/tonutils-go/ton"
 	"github.com/xssnick/tonutils-go/ton/wallet"
 )
@@ -27,12 +28,13 @@ const (
 	argComment            = "comment"
 	argDestinationAddress = "destination-address"
 	argEndPointURI        = "uri"
-	argFromWallet         = "from-wallet"
 	argLogLevel           = "log-level"
 	argRandomAddon        = "random-addon"
 	argRandomPause        = "random-pause"
 	argTip                = "tip"
 	argTonRPCURI          = "ton-rpc-uri"
+	argWallet1            = "wallet-1"
+	argWallet2            = "wallet-2"
 	argWalletType         = "wallet-type"
 )
 
@@ -74,21 +76,14 @@ func main() {
 				Usage:   "transfer comment",
 			},
 			&cli.StringFlag{
-				Name:     argDestinationAddress,
-				Aliases:  []string{"tda"},
-				Required: true,
-				Usage:    "transaction destination address",
+				Name:    argDestinationAddress,
+				Aliases: []string{"tda"},
+				Usage:   "transaction destination address",
 			},
 			&cli.StringFlag{
 				Name:  argEndPointURI,
 				Value: "https://frankfurt.ton.dex.blxrbdn.com",
 				Usage: "TON trader API endpoint",
-			},
-			&cli.StringFlag{
-				Name:     argFromWallet,
-				Aliases:  []string{"fw"},
-				Required: true,
-				Usage:    "file `path` with the seed phrase for the sending wallet",
 			},
 			&cli.StringFlag{
 				Name:    argLogLevel,
@@ -120,10 +115,21 @@ func main() {
 				Usage:   "TON RPC configuration to use",
 			},
 			&cli.StringFlag{
+				Name:     argWallet1,
+				Aliases:  []string{"w1"},
+				Required: true,
+				Usage:    "file `path` with the seed phrase for (sending?) wallet",
+			},
+			&cli.StringFlag{
+				Name:    argWallet2,
+				Aliases: []string{"w2"},
+				Usage:   "file `path` with the seed phrase for second wallet",
+			},
+			&cli.StringFlag{
 				Name:    argWalletType,
 				Aliases: []string{"wt"},
 				Value:   "V4R2",
-				Usage:   "wallet type, one of: HighloadV2R2, HighloadV3, V5R1Final, V4R2",
+				Usage:   "wallet type, one of: HighloadV3, V4R2",
 			},
 		},
 	}
@@ -163,18 +169,23 @@ func run(cc *cli.Context) error {
 		return fmt.Errorf("failed to obtain master chain info, %v", err)
 	}
 
+	if cc.String(argDestinationAddress) != "" && cc.String(argWallet2) != "" {
+		return fmt.Errorf("please use either -%s or -%s but not both", argDestinationAddress, argWallet2)
+	}
 	// initialize wallet from seed phrase
-	from, err := getWallet(api, info, cc.String(argFromWallet), cc.String(argWalletType))
+	ws, err := getWallets(api, info, [2]string{cc.String(argWallet1), cc.String(argWallet2)}, cc.String(argWalletType))
 	if err != nil {
 		return err
 	}
 
-	// get and print wallet balance
-	balance, err := from.GetBalance(ctx, info)
-	if err != nil {
-		return fmt.Errorf("failed to obtain wallet balance, %v", err)
+	for _, w := range ws {
+		// get and print wallet balance
+		balance, err := w.GetBalance(ctx, info)
+		if err != nil {
+			return fmt.Errorf("failed to obtain wallet balance, %v", err)
+		}
+		log.Info().Msgf("%v balance: %v", w.Address().String(), balance)
 	}
-	log.Info().Msgf("wallet balance: %v", balance)
 
 	prg := rand.New(rand.NewSource(time.Now().UnixNano()))
 	if cc.Uint(argRandomPause) > 0 {
@@ -191,7 +202,7 @@ func run(cc *cli.Context) error {
 	}
 
 	// generate the transaction: 1 transfer to destination address + a bloXroute tip transfer
-	tx, err := ttac.GenerateTransaction(ctx, from, cc.String(argDestinationAddress), amount, cc.Int64(argTip), cc.String(argComment))
+	from, tx, err := genTx(ctx, api, ws, cc.String(argDestinationAddress), amount, cc.Int64(argTip), cc.String(argComment))
 	if err != nil {
 		return err
 	}
@@ -213,12 +224,13 @@ func logArgs(cc *cli.Context) {
 		argComment,
 		argDestinationAddress,
 		argEndPointURI,
-		argFromWallet,
 		argLogLevel,
 		argRandomAddon,
 		argRandomPause,
 		argTip,
 		argTonRPCURI,
+		argWallet1,
+		argWallet2,
 		argWalletType,
 	}
 	for _, arg := range args {
@@ -255,16 +267,31 @@ func mbf(_ context.Context, _ uint32) (uint32, int64, error) {
 	return requestId, tm, nil
 }
 
+func getWallets(api *ton.APIClient, cmi *ton.BlockIDExt, paths [2]string, walletType string) ([2]*wallet.Wallet, error) {
+	var (
+		err error
+		res [2]*wallet.Wallet
+	)
+	for i, path := range paths {
+		if path == "" {
+			continue
+		}
+		res[i], err = getWallet(api, cmi, path, walletType)
+		if err != nil {
+			return res, err
+		}
+	}
+	return res, nil
+}
+
 func getWallet(api *ton.APIClient, cmi *ton.BlockIDExt, path, walletType string) (*wallet.Wallet, error) {
 	phrase, err := readPhrase(path)
 	if err != nil {
 		return nil, err
 	}
 	wallets := map[string]wallet.Version{
-		"HighloadV2R2": wallet.HighloadV2R2,
-		"HighloadV3":   wallet.HighloadV3,
-		"V5R1Final":    wallet.V5R1Final,
-		"V4R2":         wallet.V4R2,
+		"HighloadV3": wallet.HighloadV3,
+		"V4R2":       wallet.V4R2,
 	}
 	wt, ok := wallets[walletType]
 	if !ok {
@@ -302,4 +329,59 @@ func readPhrase(path string) ([]string, error) {
 		return nil, fmt.Errorf("invalid phrase, length %d", len(words))
 	}
 	return words, nil
+}
+
+func genTx(ctx context.Context, api *ton.APIClient, ws [2]*wallet.Wallet, toAddress string, amount, tip int64, comment string) (*wallet.Wallet, *tlb.ExternalMessage, error) {
+	var (
+		bothWallets bool = ws[0] != nil && ws[1] != nil
+		err         error
+		firstWallet bool = ws[0] != nil
+		from, to    *wallet.Wallet
+		tx          *tlb.ExternalMessage
+	)
+
+	// we specify 2 wallets and want to send from the wallet with the higher balance
+	if bothWallets {
+		from, to, err = determineSender(ctx, api, ws)
+		if err != nil {
+			return nil, nil, err
+		}
+		tx, err = ttac.GenerateTransaction(ctx, from, to.Address().String(), amount, tip, comment)
+		if err != nil {
+			return nil, nil, err
+		}
+		return from, tx, err
+	}
+	if !firstWallet {
+		return nil, nil, fmt.Errorf("first wallet is nil")
+	}
+	// we specify just one wallet and want to send from to the destination address
+	tx, err = ttac.GenerateTransaction(ctx, ws[0], toAddress, amount, tip, comment)
+	if err != nil {
+		return nil, nil, err
+	}
+	return ws[0], tx, err
+}
+
+func determineSender(ctx context.Context, api *ton.APIClient, ws [2]*wallet.Wallet) (*wallet.Wallet, *wallet.Wallet, error) {
+	// the wallet with higher balance shall be the sender
+	info, err := api.GetMasterchainInfo(ctx)
+	if err != nil || info == nil {
+		return nil, nil, fmt.Errorf("failed to obtain master chain info, %v", err)
+	}
+
+	b1, err := ws[0].GetBalance(ctx, info)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to obtain wallet balance for %v, %v", ws[0].Address(), err)
+	}
+
+	b2, err := ws[1].GetBalance(ctx, info)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to obtain wallet balance for %v, %v", ws[1].Address(), err)
+	}
+
+	if b1.Nano().Int64() > b2.Nano().Int64() {
+		return ws[0], ws[1], nil
+	}
+	return ws[1], ws[0], nil
 }
