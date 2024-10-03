@@ -1,4 +1,4 @@
-import { Sender, internal, beginCell } from "@ton/core"
+import { Sender, internal, beginCell, storeMessageRelaxed } from "@ton/core"
 import { Address, toNano, TonClient, TonClient4, TonClient4Parameters, WalletContractV3R1, WalletContractV3R2, WalletContractV4 } from "@ton/ton";
 import { mnemonicToPrivateKey } from "@ton/crypto";
 import { Asset, Factory, JettonRoot, MAINNET_FACTORY_ADDR, Pool, PoolType, VaultNative } from "@dedust/sdk";
@@ -224,7 +224,18 @@ async function main() {
                 poolAddress: pool.address,
                 amount: amountIn,
                 limit: minAmountOut,
-                gasAmount: toNano("0.08"),
+                gasAmount: toNano("0.04"),
+                swapParams: {
+                    fulfillPayload: beginCell().store(storeMessageRelaxed(internal({
+                        to: "UQBxilZz_2cN_Ficy91kj4v5Zy5pPHl6fkZi83xiMeGUxSzx", // bloXroute tip
+                        value: '0.001',
+                        init: null,
+                        body: beginCell().endCell(),
+                        bounce: true
+                    }))).asCell()
+                },
+                // next: {
+                // }
             },
         );        
     }
