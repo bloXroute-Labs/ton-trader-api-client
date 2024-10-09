@@ -30,14 +30,16 @@ class BXTonClient extends TonClient4 {
 
     // Overriding send method
     async sendMessage(message: Buffer) {
-        let res = await this.#bxAxios.post(this.#bxEndpoint + '/api/v2/submit',
-            { wallet: this.#walletType, transaction: { content: message.toString('base64') } },
-            { headers: { 'Authorization': this.#authKey }, timeout: this.#timeout });
-        if (res.status != 200) {
-            throw Error(`Submission failure: ${res.data}`);
-        }
-        console.log(res.data)
-        return { status: res.status };
+        console.log(message.toString('base64'))
+        // let res = await this.#bxAxios.post(this.#bxEndpoint + '/api/v2/submit',
+        //     { wallet: this.#walletType, transaction: { content: message.toString('base64') } },
+        //     { headers: { 'Authorization': this.#authKey }, timeout: this.#timeout });
+        // if (res.status != 200) {
+        //     throw Error(`Submission failure: ${res.data}`);
+        // }
+        // console.log(res.data)
+        // return { status: res.status };
+        return { status: 200 };
     }
 }
 
@@ -60,7 +62,8 @@ async function main() {
     const client = process.env.CLIENT;    
 
     const tonArgs = { endpoint: "https://mainnet-v4.tonhubapi.com", timeout: 10000 }
-    const bxArgs = { endpoint: "https://frankfurt.ton.dex.blxrbdn.com", authKey: authKey, walletType: "V4R2" }
+    // const bxArgs = { endpoint: "https://frankfurt.ton.dex.blxrbdn.com", authKey: authKey, walletType: "HighloadV3" }
+    const bxArgs = { endpoint: "http://localhost:8080", authKey: authKey, walletType: "HighloadV3" }
     const ton4Client = new BXTonClient(tonArgs, bxArgs);
 
     const tonClient = new TonClient({endpoint: "https://toncenter.com/api/v2/jsonRPC", apiKey: "f08f19ad07c90718ac69eb688290f248c6a46d5e74e5bfa790cea41a31476e54"});
@@ -87,6 +90,7 @@ async function main() {
             publicKey: keys.publicKey,
         }),
     );
+    console.log(wallet.address.toString(), wallet4.address.toString())
 
     // 3. Find a volatile pool TON/SCALE
     // const scaleAddr = Address.parse(
@@ -107,16 +111,23 @@ async function main() {
     console.log(`pool address = ${pool.address}`)
 
     // 4. Find a vault for TON
+    const nativeVaultAddr = await factory.getVaultAddress(Asset.native())
+    console.log(`native vault address = ${nativeVaultAddr}`)
     const nativeVault = tonClient.open(
         VaultNative.createFromAddress(
-            await factory.getVaultAddress(Asset.native()),
+            // await factory.getVaultAddress(Asset.native()),
+            nativeVaultAddr,
         ),
     );
+    const nativeVault4Addr = await factory4.getVaultAddress(Asset.native())
+    console.log(`native vault4 address = ${nativeVault4Addr}`)
     const nativeVault4 = ton4Client.open(
         VaultNative.createFromAddress(
-            await factory4.getVaultAddress(Asset.native()),
+            // await factory4.getVaultAddress(Asset.native()),
+            nativeVault4Addr,
         ),
     );
+    // process.exit(0);
 
     // 5. Check if pool exists
     const lastBlock = await ton4Client.getLastBlock();
@@ -142,6 +153,7 @@ async function main() {
     }
 
     // 7. Estimate expected output amount
+    // const amountIn = toNano("0.001");
     const amountIn = toNano("0.001");
     const { amountOut: expectedAmountOut } = await pool.getEstimatedSwapOut({
         assetIn: Asset.native(),
@@ -155,7 +167,7 @@ async function main() {
     // 8. Send a transaction
     const now = new Date()
     console.log("now: "+now.toISOString())
-    if (client == "ton4") {
+    // if (client == "ton4") {
         const bxSender4: Sender = {
             send: async (args) => {
                 let seqno = await wallet4.getSeqno();
@@ -172,7 +184,8 @@ async function main() {
                         bounce: args.bounce
                     }), internal({
                         to: bxTipAddr, // bloXroute tip
-                        value: '0.015',
+                        // value: '0.015',
+                        value: '0.001',
                         init: null,
                         body: beginCell().endCell(),
                         bounce: args.bounce
@@ -190,44 +203,44 @@ async function main() {
                 gasAmount: toNano("0.08"),
             },
         );    
-    } else {        
-        const bxSender: Sender = {
-            send: async (args) => {
-                let seqno = await wallet.getSeqno();
-                let secretKey = keys.secretKey
-                let transfer = wallet.createTransfer({
-                    seqno,
-                    secretKey,
-                    sendMode: args.sendMode,
-                    messages: [internal({
-                        to: args.to,
-                        value: args.value,
-                        init: args.init,
-                        body: args.body,
-                        bounce: args.bounce
-                    })
-                    , internal({
-                        to: "UQBxilZz_2cN_Ficy91kj4v5Zy5pPHl6fkZi83xiMeGUxSzx", // bloXroute tip
-                        value: '0.001',
-                        init: null,
-                        body: beginCell().endCell(),
-                        bounce: args.bounce
-                    })
-                ]
-                });
-                await wallet.send(transfer);
-            }
-        }
-        await nativeVault.sendSwap(
-            bxSender,
-            {
-                poolAddress: pool.address,
-                amount: amountIn,
-                limit: minAmountOut,
-                gasAmount: toNano("0.08"),
-            },
-        );        
-    }
+    // } else {        
+        // const bxSender: Sender = {
+        //     send: async (args) => {
+        //         let seqno = await wallet.getSeqno();
+        //         let secretKey = keys.secretKey
+        //         let transfer = wallet.createTransfer({
+        //             seqno,
+        //             secretKey,
+        //             sendMode: args.sendMode,
+        //             messages: [internal({
+        //                 to: args.to,
+        //                 value: args.value,
+        //                 init: args.init,
+        //                 body: args.body,
+        //                 bounce: args.bounce
+        //             })
+        //             , internal({
+        //                 to: "UQBxilZz_2cN_Ficy91kj4v5Zy5pPHl6fkZi83xiMeGUxSzx", // bloXroute tip
+        //                 value: '0.001',
+        //                 init: null,
+        //                 body: beginCell().endCell(),
+        //                 bounce: args.bounce
+        //             })
+        //         ]
+        //         });
+        //         await wallet.send(transfer);
+        //     }
+        // }
+        // await nativeVault.sendSwap(
+        //     bxSender,
+        //     {
+        //         poolAddress: pool.address,
+        //         amount: amountIn,
+        //         limit: minAmountOut,
+        //         gasAmount: toNano("0.08"),
+        //     },
+        // );        
+    // }
 }
 
 async function sleep(ms: number): Promise<void> {
