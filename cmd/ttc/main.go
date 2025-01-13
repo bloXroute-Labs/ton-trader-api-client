@@ -179,6 +179,10 @@ func run(cc *cli.Context) error {
 	}
 
 	for _, w := range ws {
+		if w == nil {
+			continue
+		}
+
 		// get and print wallet balance
 		balance, err := w.GetBalance(ctx, info)
 		if err != nil {
