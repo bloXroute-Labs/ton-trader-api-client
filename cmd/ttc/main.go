@@ -36,6 +36,7 @@ const (
 	argWallet1            = "wallet-1"
 	argWallet2            = "wallet-2"
 	argWalletType         = "wallet-type"
+	argUseMEVProtection   = "use-mev-protection"
 )
 
 var (
@@ -131,6 +132,10 @@ func main() {
 				Value:   "V4R2",
 				Usage:   "wallet type, one of: HighloadV3, V4R2",
 			},
+			&cli.BoolFlag{
+				Name:  argUseMEVProtection,
+				Usage: "Use MEV protected submission",
+			},
 		},
 	}
 
@@ -173,7 +178,7 @@ func run(cc *cli.Context) error {
 		return fmt.Errorf("please use either -%s or -%s but not both", argDestinationAddress, argWallet2)
 	}
 	// initialize wallet from seed phrase
-	ws, err := getWallets(api, info, [2]string{cc.String(argWallet1), cc.String(argWallet2)}, cc.String(argWalletType))
+	ws, err := getWallets(api, [2]string{cc.String(argWallet1), cc.String(argWallet2)}, cc.String(argWalletType))
 	if err != nil {
 		return err
 	}
@@ -212,7 +217,7 @@ func run(cc *cli.Context) error {
 	}
 
 	// send transaction to TON trader API
-	hash, err := ttac.SendTransaction(ctx, cc.String(argEndPointURI), cc.String(argAuthHeader), from, tx)
+	hash, err := ttac.SendTransaction(ctx, cc.String(argEndPointURI), cc.String(argAuthHeader), from, tx, cc.Bool(argUseMEVProtection))
 	if err != nil {
 		return err
 	}
@@ -236,6 +241,7 @@ func logArgs(cc *cli.Context) {
 		argWallet1,
 		argWallet2,
 		argWalletType,
+		argUseMEVProtection,
 	}
 	for _, arg := range args {
 		log.Info().Msgf("%s = %v", arg, cc.Value(arg))
@@ -296,6 +302,7 @@ func getWallet(api *ton.APIClient, path, walletType string) (*wallet.Wallet, err
 	wallets := map[string]wallet.Version{
 		"HighloadV3": wallet.HighloadV3,
 		"V4R2":       wallet.V4R2,
+		"V5R1Final":  wallet.V5R1Final,
 	}
 	wt, ok := wallets[walletType]
 	if !ok {
