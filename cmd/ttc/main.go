@@ -271,7 +271,7 @@ func mbf(_ context.Context, _ uint32) (uint32, int64, error) {
 	return requestId, tm, nil
 }
 
-func getWallets(api *ton.APIClient, cmi *ton.BlockIDExt, paths [2]string, walletType string) ([2]*wallet.Wallet, error) {
+func getWallets(api *ton.APIClient, paths [2]string, walletType string) ([2]*wallet.Wallet, error) {
 	var (
 		err error
 		res [2]*wallet.Wallet
@@ -280,7 +280,7 @@ func getWallets(api *ton.APIClient, cmi *ton.BlockIDExt, paths [2]string, wallet
 		if path == "" {
 			continue
 		}
-		res[i], err = getWallet(api, cmi, path, walletType)
+		res[i], err = getWallet(api, path, walletType)
 		if err != nil {
 			return res, err
 		}
@@ -288,7 +288,7 @@ func getWallets(api *ton.APIClient, cmi *ton.BlockIDExt, paths [2]string, wallet
 	return res, nil
 }
 
-func getWallet(api *ton.APIClient, cmi *ton.BlockIDExt, path, walletType string) (*wallet.Wallet, error) {
+func getWallet(api *ton.APIClient, path, walletType string) (*wallet.Wallet, error) {
 	phrase, err := readPhrase(path)
 	if err != nil {
 		return nil, err
@@ -311,7 +311,7 @@ func getWallet(api *ton.APIClient, cmi *ton.BlockIDExt, path, walletType string)
 	case wallet.V5R1Final:
 		w, err = wallet.FromSeed(api, phrase, wallet.ConfigV5R1Final{
 			NetworkGlobalID: wallet.MainnetGlobalID,
-			Workchain:       int8(cmi.Workchain),
+			Workchain:       0,
 		})
 	default:
 		w, err = wallet.FromSeed(api, phrase, wt)
