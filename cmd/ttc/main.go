@@ -37,6 +37,8 @@ const (
 	argWallet2            = "wallet-2"
 	argWalletType         = "wallet-type"
 	argUseMEVProtection   = "use-mev-protection"
+
+	baseChainWorkchainNum = 0
 )
 
 var (
@@ -318,7 +320,7 @@ func getWallet(api *ton.APIClient, path, walletType string) (*wallet.Wallet, err
 	case wallet.V5R1Final:
 		w, err = wallet.FromSeed(api, phrase, wallet.ConfigV5R1Final{
 			NetworkGlobalID: wallet.MainnetGlobalID,
-			Workchain:       0,
+			Workchain:       baseChainWorkchainNum,
 		})
 	default:
 		w, err = wallet.FromSeed(api, phrase, wt)
