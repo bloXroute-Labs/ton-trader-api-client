@@ -49,7 +49,7 @@ import (
 //	    log.Fatalf("Failed to send transaction: %v", err)
 //	}
 //	fmt.Printf("Transaction submitted successfully, message body hash: %s\n", hash)
-func SendTransaction(ctx context.Context, endPoint, authHeader string, w *wallet.Wallet, ext *tlb.ExternalMessage) (string, error) {
+func SendTransaction(ctx context.Context, endPoint, authHeader string, w *wallet.Wallet, ext *tlb.ExternalMessage, useMevProtection bool) (string, error) {
 	var walletType string
 	switch w.GetSpec().(type) {
 	case (*wallet.SpecHighloadV2R2):
@@ -70,7 +70,8 @@ func SendTransaction(ctx context.Context, endPoint, authHeader string, w *wallet
 
 	log.Info().Msgf("walletType = '%v'", walletType)
 	req := &TTASubmitRequest{
-		Wallet: walletType,
+		UseMevProtection: useMevProtection,
+		Wallet:           walletType,
 	}
 	extCell, err := tlb.ToCell(ext)
 	if err != nil {

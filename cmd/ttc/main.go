@@ -36,6 +36,9 @@ const (
 	argWallet1            = "wallet-1"
 	argWallet2            = "wallet-2"
 	argWalletType         = "wallet-type"
+	argUseMEVProtection   = "use-mev-protection"
+
+	baseChainWorkchainNum = 0
 )
 
 var (
@@ -131,6 +134,10 @@ func main() {
 				Value:   "V4R2",
 				Usage:   "wallet type, one of: HighloadV3, V4R2",
 			},
+			&cli.BoolFlag{
+				Name:  argUseMEVProtection,
+				Usage: "Use MEV protected submission",
+			},
 		},
 	}
 
@@ -173,12 +180,16 @@ func run(cc *cli.Context) error {
 		return fmt.Errorf("please use either -%s or -%s but not both", argDestinationAddress, argWallet2)
 	}
 	// initialize wallet from seed phrase
-	ws, err := getWallets(api, info, [2]string{cc.String(argWallet1), cc.String(argWallet2)}, cc.String(argWalletType))
+	ws, err := getWallets(api, [2]string{cc.String(argWallet1), cc.String(argWallet2)}, cc.String(argWalletType))
 	if err != nil {
 		return err
 	}
 
 	for _, w := range ws {
+		if w == nil {
+			continue
+		}
+
 		// get and print wallet balance
 		balance, err := w.GetBalance(ctx, info)
 		if err != nil {
@@ -208,7 +219,7 @@ func run(cc *cli.Context) error {
 	}
 
 	// send transaction to TON trader API
-	hash, err := ttac.SendTransaction(ctx, cc.String(argEndPointURI), cc.String(argAuthHeader), from, tx)
+	hash, err := ttac.SendTransaction(ctx, cc.String(argEndPointURI), cc.String(argAuthHeader), from, tx, cc.Bool(argUseMEVProtection))
 	if err != nil {
 		return err
 	}
@@ -232,6 +243,7 @@ func logArgs(cc *cli.Context) {
 		argWallet1,
 		argWallet2,
 		argWalletType,
+		argUseMEVProtection,
 	}
 	for _, arg := range args {
 		log.Info().Msgf("%s = %v", arg, cc.Value(arg))
@@ -267,7 +279,7 @@ func mbf(_ context.Context, _ uint32) (uint32, int64, error) {
 	return requestId, tm, nil
 }
 
-func getWallets(api *ton.APIClient, cmi *ton.BlockIDExt, paths [2]string, walletType string) ([2]*wallet.Wallet, error) {
+func getWallets(api *ton.APIClient, paths [2]string, walletType string) ([2]*wallet.Wallet, error) {
 	var (
 		err error
 		res [2]*wallet.Wallet
@@ -276,7 +288,7 @@ func getWallets(api *ton.APIClient, cmi *ton.BlockIDExt, paths [2]string, wallet
 		if path == "" {
 			continue
 		}
-		res[i], err = getWallet(api, cmi, path, walletType)
+		res[i], err = getWallet(api, path, walletType)
 		if err != nil {
 			return res, err
 		}
@@ -284,7 +296,7 @@ func getWallets(api *ton.APIClient, cmi *ton.BlockIDExt, paths [2]string, wallet
 	return res, nil
 }
 
-func getWallet(api *ton.APIClient, cmi *ton.BlockIDExt, path, walletType string) (*wallet.Wallet, error) {
+func getWallet(api *ton.APIClient, path, walletType string) (*wallet.Wallet, error) {
 	phrase, err := readPhrase(path)
 	if err != nil {
 		return nil, err
@@ -292,6 +304,7 @@ func getWallet(api *ton.APIClient, cmi *ton.BlockIDExt, path, walletType string)
 	wallets := map[string]wallet.Version{
 		"HighloadV3": wallet.HighloadV3,
 		"V4R2":       wallet.V4R2,
+		"V5R1Final":  wallet.V5R1Final,
 	}
 	wt, ok := wallets[walletType]
 	if !ok {
@@ -307,7 +320,7 @@ func getWallet(api *ton.APIClient, cmi *ton.BlockIDExt, path, walletType string)
 	case wallet.V5R1Final:
 		w, err = wallet.FromSeed(api, phrase, wallet.ConfigV5R1Final{
 			NetworkGlobalID: wallet.MainnetGlobalID,
-			Workchain:       int8(cmi.Workchain),
+			Workchain:       baseChainWorkchainNum,
 		})
 	default:
 		w, err = wallet.FromSeed(api, phrase, wt)

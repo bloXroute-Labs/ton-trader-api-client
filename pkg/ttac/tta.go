@@ -17,7 +17,8 @@ type TTASubmitRequest struct {
 	Transaction struct {
 		Content string `json:"content"`
 	} `json:"transaction"`
-	Wallet string `json:"wallet"`
+	UseMevProtection bool   `json:"use_mev_protection"`
+	Wallet           string `json:"wallet"`
 }
 
 // TTASubmitResponse represents the response from the /api/v2/submit endpoint.
