@@ -3,15 +3,18 @@ module github.com/bloXroute-Labs/ton-trader-api-client
 go 1.23.1
 
 require (
+	github.com/oapi-codegen/runtime v1.1.1
 	github.com/rs/zerolog v1.33.0
 	github.com/urfave/cli/v2 v2.27.4
 	github.com/xssnick/tonutils-go v1.10.1
 )
 
 require (
+	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
+	github.com/google/uuid v1.5.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.19 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20220328075252-7dd334e3daae // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sigurn/crc16 v0.0.0-20211026045750-20ab5afb07e3 // indirect

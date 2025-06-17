@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bloXroute-Labs/ton-trader-api-client/api"
 	"github.com/rs/zerolog/log"
 	"github.com/xssnick/tonutils-go/tlb"
 	"github.com/xssnick/tonutils-go/ton/wallet"
@@ -83,4 +84,38 @@ func SendTransaction(ctx context.Context, endPoint, authHeader string, w *wallet
 		return "", err
 	}
 	return res.MsgBodyHash, err
+}
+
+func SendTransactionCodegen(ctx context.Context, ttaAPI *api.ClientWithResponses, authHeader string, w *wallet.Wallet, ext *tlb.ExternalMessage, useMevProtection bool) (string, error) {
+	var walletType string
+	switch w.GetSpec().(type) {
+	case (*wallet.SpecHighloadV2R2):
+		walletType = "HighloadV2R2"
+	case (*wallet.SpecHighloadV3):
+		walletType = "HighloadV3"
+	case (*wallet.SpecV3):
+		return "", errors.New("unsupported wallet type; please use one these: HighloadV2R2, HighloadV3, V4R2 or V5R1Final")
+	case (*wallet.SpecV4R2):
+		walletType = "V4R2"
+	case (*wallet.SpecV5R1Beta):
+		return "", errors.New("unsupported wallet type; please use one these: HighloadV2R2, HighloadV3, V4R2 or V5R1Final")
+	case (*wallet.SpecV5R1Final):
+		walletType = "V5R1Final"
+	default:
+		return "", errors.New("unsupported wallet type; please use one these: HighloadV2R2, HighloadV3, V4R2 or V5R1Final")
+	}
+	log.Info().Msgf("walletType = '%v'", walletType)
+
+	reqBody := api.PostApiV2SubmitJSONRequestBody{Wallet: api.SubmitRequestWallet(walletType), UseMevProtection: &useMevProtection}
+	extCell, err := tlb.ToCell(ext)
+	if err != nil {
+		return "", fmt.Errorf("failed to convert external message to cell: %w", err)
+	}
+	reqBody.Transaction.Content = base64.StdEncoding.EncodeToString(extCell.ToBOC())
+
+	res, err := ttaAPI.PostApiV2SubmitWithResponse(ctx, &api.PostApiV2SubmitParams{Authorization: authHeader}, reqBody)
+	if err != nil || res.JSON200 == nil {
+		return "", err // TODO: error responses?
+	}
+	return res.JSON200.MsgBodyHash, err
 }

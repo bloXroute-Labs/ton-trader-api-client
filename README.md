@@ -9,7 +9,7 @@ The `ttac` package features the following functions:
 - `GetTipTransfer()`: generates just the bloXroute tip transfer
 - `SendTransaction()`: sends a transaction to TON trader API
 
-In order to try the code you will need: a
+In order to try the code you will need: 
 - file that contains the seed phrase for the wallet from which you wish to send
 - bloXroute authorization header
 

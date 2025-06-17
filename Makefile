@@ -11,14 +11,14 @@ version := $(or $(version), $(shell cat /app/build-release | tr -d '\n'))
 all: build
 
 clean:
-	rm -f $(BIN_DIR)/ttc
+	rm -f $(BIN_DIR)/rawcli
 
 build: lint
-	rm -f $(BIN_DIR)/ttc
-	go build -o $(BIN_DIR)/ttc -v -ldflags "-X main.rev=$(version) -X main.bts=$(timestamp)" cmd/ttc/*.go
+	rm -f $(BIN_DIR)/rawcli
+	go build -o $(BIN_DIR)/rawcli -v -ldflags "-X main.rev=$(version) -X main.bts=$(timestamp)" cmd/rawcli/*.go
 
 linux:
-	GOOS=linux GOARCH=amd64 go build -o bin/ttc-linux-amd64 -v -ldflags "-X main.rev=$(version) -X main.bts=$(timestamp)" cmd/ttc/*.go
+	GOOS=linux GOARCH=amd64 go build -o bin/rawcli-linux-amd64 -v -ldflags "-X main.rev=$(version) -X main.bts=$(timestamp)" cmd/rawcli/*.go
 
 lint:
 	go mod tidy
