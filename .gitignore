@@ -25,3 +25,6 @@ go.work.sum
 .env
 
 .vscode/*
+
+dex-examples/dedust/node_modules/*
+dex-examples/dedust/dist/*

@@ -10,7 +10,7 @@ import (
 	"github.com/xssnick/tonutils-go/ton/wallet"
 )
 
-const tipAddress = "UQAw0AJjHbMYQobYXHBoW29ShKx1V2UjaiKanhDYBNJYDPUh"
+const tipAddress = "UQDQucnwr0yaahJWiSJqBtM-skV_dlqWkDEP_dF9h9Rvm2Bn"
 
 // GetTipTransfer creates a transfer message for a tip transaction.
 //

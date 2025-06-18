@@ -1,57 +1,112 @@
-# TON trader API client
+# TON Trader API Client
 
-## intro
+## Introduction
 
-This repo contains a [TON trader API client (`ttac`) package](pkg/ttac) and some [example code](cmd/ttc/main.go) that demonstrates how to build and send a request to bloXroute's TON trader API service.
+This repository contains two example clients for interacting with BloXroute's TON Trader API service:
 
-The `ttac` package features the following functions:
-- `GenerateTransaction()`: generates a TON transaction including a tip transfer to the bloXroute tip address
-- `GetTipTransfer()`: generates just the bloXroute tip transfer
-- `SendTransaction()`: sends a transaction to TON trader API
+- **rawcli**: A low-level client that constructs and sends raw HTTP requests to the TON Trader API
+- **oapicli**: A high-level client that uses a code-generated OpenAPI client to interact with all available API methods
 
-In order to try the code you will need: 
-- file that contains the seed phrase for the wallet from which you wish to send
-- bloXroute authorization header
+Both clients demonstrate how to build and send TON transactions, including tip transfers, using different approaches.
 
-## how to build
+---
 
-If you have `go` and `make` installed on your system simply call the `make` command.
+## Building
 
-
-## how to invoke
-
-example:
+If you have `go` and `make` installed, simply run:
 
 ```
-bin/ttc --auth-header <authHeader> --from-wallet ./ton-1 --destination-address UQAyHtxcmMSOUuqqPF1QUbUSTIAJz5bOPKBP-5a4ZtgEQxRt -a 220000000
+make
 ```
 
-## command line arguments
+This will build both example clients.
 
-Last but not least call the client with `-h` (`bin/ttc -h`) to view all supported command line arguments
+---
+
+## Usage
+
+### rawcli
+
+The `rawcli` client (`ttc`) sends requests to the TON Trader API using raw HTTP calls.  
+You will need a file containing the seed phrase for the wallet you wish to send from, and a valid bloXroute authorization header.
+
+**Example command:**
 
 ```
-NAME:
-   TON trader API client - make requests to ton-trader-api service
-
-USAGE:
-   TON trader API client [global options] command [command options]
-
-COMMANDS:
-   help, h  Shows a list of commands or help for one command
-
-GLOBAL OPTIONS:
-   --amount value, -a value                  amount, default: 0.25 TON (default: 250000000)
-   --auth-header value, --ah value           bloXroute auth header
-   --comment value, -c value                 transfer comment (default: "TON trader API test, 2024-09-19T19:36:45.864285")
-   --destination-address value, --tda value  transaction destination address
-   --uri value                               TON trader API endpoint (default: "https://eu.ton.dex.blxrbdn.com")
-   --from-wallet value, --fw value           file with the seed phrase for the sending wallet
-   --log-level value, --ll value             log level, one of: debug, info, warn, error (default: "info")
-   --tip value, -t value                     tip, default: 0.015 TON (default: 15000000)
-   --ton-rpc-uri value, --rpc value          file with the seed phrase for the receiving wallet (default: "https://ton.org/global-config.json")
-   --help, -h                                show help
+go run cmd/rawcli/main.go \
+  -c "your transfer comment" \
+  -a 9800000 \
+  -ah <your_auth_header> \
+  -uri <ton_trader_api_endpoint> \
+  -ll debug \
+  --random-pause 23 \
+  -rpc <ton_rpc_config_path> \
+  -w1 <wallet1_seed_file> \
+  -w2 <wallet2_seed_file> \
+  -tip 8000008
 ```
 
-## dex examples
-See `dex-examples` for code samples which connect TON Trader API and popular DEXs - DeDust and StonFi.
+**Key arguments:**
+
+- `-a`, `--amount` — Amount to send (in nanotons)
+- `-ah`, `--auth-header` — bloXroute auth header
+- `-c`, `--comment` — Transfer comment
+- `-uri` — TON Trader API endpoint
+- `-ll`, `--log-level` — Log level (debug, info, warn, error)
+- `--random-pause` — Random pause before sending (seconds)
+- `-rpc` — TON RPC config file path
+- `-w1` — Path to first wallet's seed phrase file
+- `-w2` — Path to second wallet's seed phrase file (optional)
+- `-tip` — Tip amount (in nanotons)
+
+Run `go run cmd/rawcli/main.go -h` for the full list of options.
+
+---
+
+### oapicli
+
+The `oapicli` client uses the OpenAPI-generated Go client for the TON Trader API, supporting all API methods.
+
+**Example command:**
+
+```
+go run cmd/oapicli/main.go \
+  --auth-header=<your_auth_header> \
+  --wallet-path=<wallet_seed_file> \
+  --destination-address=<destination_ton_address> \
+  --amount=1000000 \
+  --ton-rpc-uri=<ton_rpc_uri> \
+  --trader-api=<ton_trader_api_endpoint> \
+  --wallet-type=HighloadV3 \
+  --tip=8000000 \
+  --log-level=info
+```
+
+**Key arguments:**
+
+- `--auth-header` — bloXroute auth header
+- `--wallet-path` — Path to wallet seed phrase file
+- `--destination-address` — TON address to send to
+- `--amount` — Amount to send (in nanotons)
+- `--ton-rpc-uri` — TON RPC URI or config file
+- `--trader-api` — TON Trader API endpoint
+- `--wallet-type` — Wallet type (HighloadV3, V4R2, etc)
+- `--tip` — Tip amount (in nanotons)
+- `--log-level` — Log level (debug, info, warn, error)
+- `--mev-protection` — Enable MEV protection (optional)
+- `--expiration` — Optional expiration time in seconds
+
+Run `go run cmd/oapicli/main.go --help` for the full list of options.
+
+---
+
+Both clients support a variety of command line arguments for full control over transaction construction and API interaction.  
+See the example commands above and use the `-h` or `--help` flag for each client to view all supported options.
+
+---
+
+## DEX Examples
+
+See the `dex-examples` directory for code samples that connect the TON Trader API with popular DEXs such as DeDust and StonFi.
+
+---
