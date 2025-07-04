@@ -31,7 +31,6 @@ const (
 	argWalletType    = "wallet-type"
 	argAmount        = "amount"
 	argMevProtection = "mev-protection"
-	argExpiration    = "expiration"
 	argDestAddress   = "destination-address"
 )
 
@@ -54,7 +53,6 @@ func main() {
 			&cli.StringFlag{Name: argWalletType, Required: true, Usage: "Wallet type (HighloadV3, V4R2, etc)"},
 			&cli.Int64Flag{Name: argAmount, Required: true, Usage: "Amount in nanotons to send"},
 			&cli.BoolFlag{Name: argMevProtection, Usage: "Enable MEV protection"},
-			&cli.IntFlag{Name: argExpiration, Usage: "Optional expiration time in seconds"},
 			&cli.StringFlag{Name: argDestAddress, Required: true, Usage: "Destination address"},
 		},
 		Action: run,
@@ -105,15 +103,9 @@ func run(c *cli.Context) error {
 		return fmt.Errorf("failed to build/sign transaction: %w", err)
 	}
 
-	var expiration *int
-	if c.IsSet(argExpiration) {
-		exp := c.Int(argExpiration)
-		expiration = &exp
-	}
 	req := api.SubmitRequest{
-		ExpirationTimeSec: expiration,
-		Wallet:            api.SubmitRequestWallet(c.String(argWalletType)),
-		UseMevProtection:  &mevProtection,
+		Wallet:           api.SubmitRequestWallet(c.String(argWalletType)),
+		UseMevProtection: &mevProtection,
 	}
 	req.Transaction.Content = signedMessageB64
 	params := &api.PostApiV2SubmitParams{Authorization: c.String(argAuthHeader)}

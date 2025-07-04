@@ -94,7 +94,6 @@ go run cmd/oapicli/main.go \
 - `--tip` — Tip amount (in nanotons)
 - `--log-level` — Log level (debug, info, warn, error)
 - `--mev-protection` — Enable MEV protection (optional)
-- `--expiration` — Optional expiration time in seconds
 
 Run `go run cmd/oapicli/main.go --help` for the full list of options.
 

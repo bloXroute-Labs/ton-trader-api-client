@@ -64,9 +64,7 @@ type SubmitBatchResponse struct {
 
 // SubmitRequest defines model for SubmitRequest.
 type SubmitRequest struct {
-	// ExpirationTimeSec Expiration time in seconds for the batch landing. If not set, defaults to 18 seconds or time left to the next block time depending on transactions.
-	ExpirationTimeSec *int `json:"expiration_time_sec,omitempty"`
-	Transaction       struct {
+	Transaction struct {
 		// Content The signed payload of the TON transaction (in base64).
 		Content string `json:"content"`
 	} `json:"transaction"`
