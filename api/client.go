@@ -90,10 +90,7 @@ type TipWalletRequest struct {
 	// Address Sender wallet address.
 	Address          *string   `json:"address,omitempty"`
 	ExternalMessages *[]string `json:"external_messages,omitempty"`
-
-	// Shard Shard identifier in hex format.
-	Shard *string `json:"shard,omitempty"`
-	union json.RawMessage
+	union            json.RawMessage
 }
 
 // TipWalletRequest0 defines model for .
@@ -251,13 +248,6 @@ func (t TipWalletRequest) MarshalJSON() ([]byte, error) {
 			return nil, fmt.Errorf("error marshaling 'external_messages': %w", err)
 		}
 	}
-
-	if t.Shard != nil {
-		object["shard"], err = json.Marshal(t.Shard)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'shard': %w", err)
-		}
-	}
 	b, err = json.Marshal(object)
 	return b, err
 }
@@ -284,13 +274,6 @@ func (t *TipWalletRequest) UnmarshalJSON(b []byte) error {
 		err = json.Unmarshal(raw, &t.ExternalMessages)
 		if err != nil {
 			return fmt.Errorf("error reading 'external_messages': %w", err)
-		}
-	}
-
-	if raw, found := object["shard"]; found {
-		err = json.Unmarshal(raw, &t.Shard)
-		if err != nil {
-			return fmt.Errorf("error reading 'shard': %w", err)
 		}
 	}
 
