@@ -10,7 +10,7 @@ import (
 	"github.com/xssnick/tonutils-go/ton/wallet"
 )
 
-const tipAddress = "UQAw0AJjHbMYQobYXHBoW29ShKx1V2UjaiKanhDYBNJYDPUh"
+const tipAddress = "UQDQucnwr0yaahJWiSJqBtM-skV_dlqWkDEP_dF9h9Rvm2Bn"
 
 // GetTipTransfer creates a transfer message for a tip transaction.
 //
@@ -35,13 +35,16 @@ const tipAddress = "UQAw0AJjHbMYQobYXHBoW29ShKx1V2UjaiKanhDYBNJYDPUh"
 //	if err != nil {
 //	    log.Fatalf("Failed to create tip transfer: %v", err)
 //	}
-func GetTipTransfer(from *wallet.Wallet, tip int64) (*wallet.Message, error) {
-	tipAmount := tlb.FromNanoTON(big.NewInt(tip))
-	tipAddress, err := address.ParseAddr(tipAddress)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse tip address: %v", err)
+func GetTipTransfer(from *wallet.Wallet, tipAmount int64, tipAddr *address.Address) (*wallet.Message, error) {
+	tipCoins := tlb.FromNanoTON(big.NewInt(tipAmount))
+	if tipAddr == nil {
+		var err error
+		if tipAddr, err = address.ParseAddr(tipAddress); err != nil {
+			return nil, fmt.Errorf("failed to parse tip address: %v", err)
+		}
 	}
-	tt, err := from.BuildTransfer(tipAddress, tipAmount, true, fmt.Sprintf("tip from %s", from.Address().String()))
+
+	tt, err := from.BuildTransfer(tipAddr, tipCoins, true, fmt.Sprintf("tip from %s", from.Address().String()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate tip transfer: %v", err)
 	}
@@ -77,7 +80,7 @@ func GetTipTransfer(from *wallet.Wallet, tip int64) (*wallet.Message, error) {
 //	if err != nil {
 //	    log.Fatalf("Failed to generate transaction: %v", err)
 //	}
-func GenerateTransaction(ctx context.Context, from *wallet.Wallet, to string, amount, tip int64, comment string) (*tlb.ExternalMessage, error) {
+func GenerateTransaction(ctx context.Context, from *wallet.Wallet, to string, amount, tipAmount int64, tipAddr *address.Address, comment string) (*tlb.ExternalMessage, error) {
 	var msgs []*wallet.Message
 
 	toAddress, err := address.ParseAddr(to)
@@ -90,7 +93,7 @@ func GenerateTransaction(ctx context.Context, from *wallet.Wallet, to string, am
 	}
 	msgs = append(msgs, t1)
 
-	tt, err := GetTipTransfer(from, tip)
+	tt, err := GetTipTransfer(from, tipAmount, tipAddr)
 	if err != nil {
 		return nil, err
 	}

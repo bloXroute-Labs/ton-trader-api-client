@@ -359,7 +359,7 @@ func genTx(ctx context.Context, api *ton.APIClient, ws [2]*wallet.Wallet, toAddr
 		if err != nil {
 			return nil, nil, err
 		}
-		tx, err = ttac.GenerateTransaction(ctx, from, to.Address().String(), amount, tip, comment)
+		tx, err = ttac.GenerateTransaction(ctx, from, to.Address().String(), amount, tip, nil, comment)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -369,7 +369,7 @@ func genTx(ctx context.Context, api *ton.APIClient, ws [2]*wallet.Wallet, toAddr
 		return nil, nil, fmt.Errorf("first wallet is nil")
 	}
 	// we specify just one wallet and want to send from to the destination address
-	tx, err = ttac.GenerateTransaction(ctx, ws[0], toAddress, amount, tip, comment)
+	tx, err = ttac.GenerateTransaction(ctx, ws[0], toAddress, amount, tip, nil, comment)
 	if err != nil {
 		return nil, nil, err
 	}

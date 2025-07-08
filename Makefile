@@ -1,4 +1,4 @@
-.PHONY: all build 
+.PHONY: all build clean linux lint test
 
 BIN_DIR := ./bin
 version := $(shell git rev-parse --short=12 HEAD)
@@ -7,18 +7,18 @@ timestamp := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 version := $(or $(version), $(shell cat /app/build-release | tr -d '\n'))
 
-
 all: build
 
 clean:
-	rm -f $(BIN_DIR)/ttc
+	rm -f $(BIN_DIR)/rawcli $(BIN_DIR)/oapicli
 
 build: lint
-	rm -f $(BIN_DIR)/ttc
-	go build -o $(BIN_DIR)/ttc -v -ldflags "-X main.rev=$(version) -X main.bts=$(timestamp)" cmd/ttc/*.go
+	go build -o $(BIN_DIR)/rawcli -v -ldflags "-X main.rev=$(version) -X main.bts=$(timestamp)" cmd/rawcli/*.go
+	go build -o $(BIN_DIR)/oapicli -v -ldflags "-X main.rev=$(version) -X main.bts=$(timestamp)" cmd/oapicli/*.go
 
 linux:
-	GOOS=linux GOARCH=amd64 go build -o bin/ttc-linux-amd64 -v -ldflags "-X main.rev=$(version) -X main.bts=$(timestamp)" cmd/ttc/*.go
+	GOOS=linux GOARCH=amd64 go build -o bin/rawcli-linux-amd64 -v -ldflags "-X main.rev=$(version) -X main.bts=$(timestamp)" cmd/rawcli/*.go
+	GOOS=linux GOARCH=amd64 go build -o bin/oapicli-linux-amd64 -v -ldflags "-X main.rev=$(version) -X main.bts=$(timestamp)" cmd/oapicli/*.go
 
 lint:
 	go mod tidy
