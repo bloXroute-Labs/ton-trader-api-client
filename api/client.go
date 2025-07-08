@@ -99,9 +99,6 @@ type TipWalletRequest0 = interface{}
 // TipWalletRequest1 defines model for .
 type TipWalletRequest1 = interface{}
 
-// TipWalletRequest2 defines model for .
-type TipWalletRequest2 = interface{}
-
 // TipWalletResponse defines model for TipWalletResponse.
 type TipWalletResponse struct {
 	// Shard Shard id in hex format
@@ -186,32 +183,6 @@ func (t *TipWalletRequest) FromTipWalletRequest1(v TipWalletRequest1) error {
 
 // MergeTipWalletRequest1 performs a merge with any union data inside the TipWalletRequest, using the provided TipWalletRequest1
 func (t *TipWalletRequest) MergeTipWalletRequest1(v TipWalletRequest1) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsTipWalletRequest2 returns the union data inside the TipWalletRequest as a TipWalletRequest2
-func (t TipWalletRequest) AsTipWalletRequest2() (TipWalletRequest2, error) {
-	var body TipWalletRequest2
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromTipWalletRequest2 overwrites any union data inside the TipWalletRequest as the provided TipWalletRequest2
-func (t *TipWalletRequest) FromTipWalletRequest2(v TipWalletRequest2) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeTipWalletRequest2 performs a merge with any union data inside the TipWalletRequest, using the provided TipWalletRequest2
-func (t *TipWalletRequest) MergeTipWalletRequest2(v TipWalletRequest2) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
