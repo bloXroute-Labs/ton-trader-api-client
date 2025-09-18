@@ -49,7 +49,7 @@ import (
 //	    log.Fatalf("Failed to send transaction: %v", err)
 //	}
 //	fmt.Printf("Transaction submitted successfully, message body hash: %s\n", hash)
-func SendTransaction(ctx context.Context, endPoint, authHeader string, w *wallet.Wallet, ext *tlb.ExternalMessage, useMevProtection bool) (string, error) {
+func SendTransaction(ctx context.Context, endPoint, authHeader string, w *wallet.Wallet, ext *tlb.ExternalMessage, useMevProtection bool) (string, time.Time, error) {
 	var walletType string
 	switch w.GetSpec().(type) {
 	case (*wallet.SpecHighloadV2R2):
@@ -57,15 +57,15 @@ func SendTransaction(ctx context.Context, endPoint, authHeader string, w *wallet
 	case (*wallet.SpecHighloadV3):
 		walletType = "HighloadV3"
 	case (*wallet.SpecV3):
-		return "", errors.New("unsupported wallet type; please use one these: HighloadV2R2, HighloadV3, V4R2 or V5R1Final")
+		return "", time.Time{}, errors.New("unsupported wallet type; please use one these: HighloadV2R2, HighloadV3, V4R2 or V5R1Final")
 	case (*wallet.SpecV4R2):
 		walletType = "V4R2"
 	case (*wallet.SpecV5R1Beta):
-		return "", errors.New("unsupported wallet type; please use one these: HighloadV2R2, HighloadV3, V4R2 or V5R1Final")
+		return "", time.Time{}, errors.New("unsupported wallet type; please use one these: HighloadV2R2, HighloadV3, V4R2 or V5R1Final")
 	case (*wallet.SpecV5R1Final):
 		walletType = "V5R1Final"
 	default:
-		return "", errors.New("unsupported wallet type; please use one these: HighloadV2R2, HighloadV3, V4R2 or V5R1Final")
+		return "", time.Time{}, errors.New("unsupported wallet type; please use one these: HighloadV2R2, HighloadV3, V4R2 or V5R1Final")
 	}
 
 	log.Info().Msgf("walletType = '%v'", walletType)
@@ -75,12 +75,12 @@ func SendTransaction(ctx context.Context, endPoint, authHeader string, w *wallet
 	}
 	extCell, err := tlb.ToCell(ext)
 	if err != nil {
-		return "", fmt.Errorf("failed to convert external message to cell: %w", err)
+		return "", time.Time{}, fmt.Errorf("failed to convert external message to cell: %w", err)
 	}
 	req.Transaction.Content = base64.StdEncoding.EncodeToString(extCell.ToBOC())
-	res, err := submitTransaction(ctx, endPoint, authHeader, req, 10*time.Second)
+	res, sentTime, err := submitTransaction(ctx, endPoint, authHeader, req, 10*time.Second)
 	if err != nil {
-		return "", err
+		return "", time.Time{}, err
 	}
-	return res.MsgBodyHash, err
+	return res.MsgBodyHash, sentTime, err
 }
