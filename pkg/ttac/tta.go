@@ -33,12 +33,12 @@ type ErrorResponse struct {
 }
 
 // submitTransaction sends a POST request to submit a signed TON transaction with a context.
-func submitTransaction(ctx context.Context, baseURL, authHeader string, submitReq *TTASubmitRequest, timeout time.Duration) (*TTASubmitResponse, error) {
+func submitTransaction(ctx context.Context, baseURL, authHeader string, submitReq *TTASubmitRequest, timeout time.Duration) (*TTASubmitResponse, time.Time, error) {
 	// Marshal the request body into JSON
 	reqBody, err := json.Marshal(submitReq)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to marshal request")
-		return nil, fmt.Errorf("failed to marshal request: %w", err)
+		return nil, time.Time{}, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
 	// Create the HTTP request with the provided context
@@ -46,7 +46,7 @@ func submitTransaction(ctx context.Context, baseURL, authHeader string, submitRe
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(reqBody))
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create HTTP request")
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, time.Time{}, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	// Set headers
@@ -57,19 +57,22 @@ func submitTransaction(ctx context.Context, baseURL, authHeader string, submitRe
 	client := &http.Client{
 		Timeout: timeout,
 	}
+
+	log.Info().Msgf("Sending ext msg to %s", url)
+	sentTime := time.Now()
 	resp, err := client.Do(req)
 	if err != nil {
 		// Check if the error is due to context cancellation or deadline exceeded
 		if ctx.Err() == context.Canceled {
 			log.Error().Err(ctx.Err()).Msg("Request was canceled")
-			return nil, fmt.Errorf("request was canceled: %w", ctx.Err())
+			return nil, time.Time{}, fmt.Errorf("request was canceled: %w", ctx.Err())
 		} else if ctx.Err() == context.DeadlineExceeded {
 			log.Error().Err(ctx.Err()).Msg("Request deadline exceeded")
-			return nil, fmt.Errorf("request deadline exceeded: %w", ctx.Err())
+			return nil, time.Time{}, fmt.Errorf("request deadline exceeded: %w", ctx.Err())
 		}
 
 		log.Error().Err(err).Msg("Failed to send HTTP request")
-		return nil, fmt.Errorf("failed to send request: %w", err)
+		return nil, time.Time{}, fmt.Errorf("failed to send request: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -77,7 +80,7 @@ func submitTransaction(ctx context.Context, baseURL, authHeader string, submitRe
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to read response body")
-		return nil, fmt.Errorf("failed to read response body: %w", err)
+		return nil, time.Time{}, fmt.Errorf("failed to read response body: %w", err)
 	}
 
 	// Log the status code
@@ -88,18 +91,18 @@ func submitTransaction(ctx context.Context, baseURL, authHeader string, submitRe
 		var errorResp ErrorResponse
 		if err := json.Unmarshal(body, &errorResp); err != nil {
 			log.Error().Err(err).Msg("Failed to parse error response")
-			return nil, fmt.Errorf("failed to parse error response: %w", err)
+			return nil, time.Time{}, fmt.Errorf("failed to parse error response: %w", err)
 		}
 		log.Error().Int("code", errorResp.Code).Str("message", errorResp.Message).Msg("TTA API error")
-		return nil, fmt.Errorf("API error: %s (code: %d)", errorResp.Message, errorResp.Code)
+		return nil, time.Time{}, fmt.Errorf("API error: %s (code: %d)", errorResp.Message, errorResp.Code)
 	}
 
 	// Parse the successful response
 	var submitResp TTASubmitResponse
 	if err := json.Unmarshal(body, &submitResp); err != nil {
 		log.Error().Err(err).Msg("Failed to parse successful response")
-		return nil, fmt.Errorf("failed to parse response: %w", err)
+		return nil, time.Time{}, fmt.Errorf("failed to parse response: %w", err)
 	}
 
-	return &submitResp, nil
+	return &submitResp, sentTime, nil
 }
