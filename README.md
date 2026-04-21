@@ -1,5 +1,7 @@
 # TON Trader API Client
 
+**TON support and all related components will be sunset on Apr 24 2026**
+
 ## Introduction
 
 This repository contains two example clients for interacting with BloXroute's TON Trader API service:
